@@ -1,0 +1,1 @@
+<-- <socket.socket fd=5, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('192.168.1.40', 9999), raddr=('192.168.1.40', 48394)> 2022-04-25 23:11:54.713625 return 0;(1, 'b', 'h', 'c');(2, 'r', 's', 'k');(3, 'j', 'n', 'p');(4, 'v', 'c', 'l');(5, 'g', 'g', 'v');(6, 'o', 'a', 'f')

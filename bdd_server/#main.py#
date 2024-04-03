@@ -1,0 +1,169 @@
+# @brief: Ce fichier a pour but d'attendre les connexions venant du game_server
+#       afin de gerer les taches demandees
+
+import socket
+import threading
+from requests_treatments.lobby_requests_treatments import *
+from requests_treatments.room_requests_treatments import *
+from requests_treatments.treatments_code import *
+from requests_treatments.treatments_error import *
+from db_server import *
+from maintenance import *
+from logs import *
+
+# @brief: Cette classe permet de gerer les differents threads
+# @input: pour creer un thread on a besoin de lui passer
+#       un code server (cf plus bas)
+class ServerThread(threading.Thread):
+
+    def __init__(self, server_socket):
+        threading.Thread.__init__(self)
+        self.server_socket = server_socket
+
+    def run(self):
+        while(True):
+            # attente d'une requete
+            request = network.recv_msg_GS(server_socket).split(";")
+            # si il s'agit d'un code vide, alors on quitte le thread
+            if request[0] == '':
+                break
+            # sinon on recupere le code
+            code_request = int(request[0])
+            # et les parametres
+            params = request[1:]
+
+            # =============================================
+            # LOBBY PHASE
+            # =============================================
+            # ========== INSCRCIPTION ==========
+            if code_request == INSCRIPTION:
+                write_log_recv(server_socket, "inscription", params)
+                if len(params) != 4:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = inscription_treatments(params[0], params[1], params[2], params[3])
+            # ========== VERIF MAIL ==========
+            if code_request == VERIFIE_MAIL:
+                write_log_recv(server_socket, "verifie mail", params)
+                if len(params) != 2:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = verifie_mail(params[0], params[1])
+            # ========== LOGIN ==========
+            elif code_request == LOGIN:
+                write_log_recv(server_socket, "login", params)
+                if len(params) != 2:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = login_treatments(params[0], params[1])
+            # ========== STAT DETAILLEES ==========
+            elif code_request == STAT_DET:
+                write_log_recv(server_socket, "stat det", params)
+                if len(params) != 3:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = archive_detailed_consultation_treatments(params[0],params[1],params[2])
+            # ========== STAT GLOABLE ==========
+            elif code_request == STAT_GLOBALE:
+quit                write_log_recv(server_socket, "stat globale", params)
+                if len(params) != 1:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = archive_global_consultation_treatments(params[0])
+            # ========== LOGOUT ==========
+            elif code_request == LOGOUT:
+                write_log_recv(server_socket, "logout", params)
+                if len(params) != 1:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = logout_treatments(params[0])
+            # ========== CREATE ROOM ==========
+            elif code_request == CREATE_ROOM:
+                write_log_recv(server_socket, "create room", params)
+                if len(params) != 1:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = create_room_treatments(params[0])
+            # ========== JOIN ROOM ==========
+            elif code_request == JOIN_ROOM:
+                write_log_recv(server_socket, "join room", params)
+                if len(params) != 2:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = set_player_in_room_treatments(params[0], params[1])
+            # ========== REDIRECT TO LOBBY ==========
+            elif code_request == REDIRECT_LOBBY:
+                write_log_recv(server_socket, "redirect lobby", params)
+                if len(params) != 1:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = is_connected(params[0])
+                    ret = [ret]
+            # =============================================
+            # ROOM PHASE
+            # =============================================
+            # ========== LEAVE ROOM ==========
+            elif code_request == LEAVE_ROOM:
+                write_log_recv(server_socket, "leave room", params)
+                if len(params) != 2:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = set_player_not_in_room_treatments(params[0], params[1])
+            # ========== GET CATEGORIE ==========
+            elif code_request == GET_CATEGORIE:
+                write_log_recv(server_socket, "get cat", params)
+                if len(params) != 0:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = send_categorie_treatments()
+            # ========== CREATE PION ==========
+            elif code_request == CREATE_PION:
+                write_log_recv(server_socket, "create pion", params)
+                if len(params) != 3:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = create_pion_treatments(params[0], params[1], params[2])
+            # ========== GET QUESTION ==========
+            elif code_request == GET_QUESTION:
+                write_log_recv(server_socket, "get question", params)
+                if len(params) != 2:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = send_question_treatments(params[0], params[1])
+            # ========== UPDATE PION ==========
+            elif code_request == UPDATE_PION:
+                write_log_recv(server_socket, "update pion", params)
+                if len(params) != 10:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = update_pion_treatments(params[0], params[1], params[2], params[3], params[4], params[5],
+                    params[6], params[7], params[8], params[9])
+            # ========== END GAME ==========
+            elif code_request == END_GAME:
+                write_log_recv(server_socket, "end game", params)
+                if len(params) != 2:
+                    ret = BAD_REQUEST_FORMAT
+                else:
+                    ret = end_game_treatments(params[0], params[1])
+            # ========== END GAME ==========
+            elif code_request == MAINTENANCE:
+                write_log_recv(server_socket, "maintenance", params)
+                maintenance()
+                ret = SUCCESS
+            # ========== PAS RECONNU ==========
+            else:
+                write_log_recv(server_socket, "unknown request code", params)
+                ret = UNKNOWN_REQUEST_CODE
+            ret = ";".join(str(val) for val in ret)
+            write_log_send(server_socket, ret)
+            network.send_msg_GS(ret, server_socket)
+        return
+
+# Creation d'un objet reseau pour attendre des connexion du lobby et des rooms
+network = DBNetwork()
+# Boucle principale qui attends les connexions
+while 1:
+    server_socket = network.reception_server()
+    # creation d'un thread pour chaque connexion
+    newthread = ServerThread(server_socket)
+    newthread.start()

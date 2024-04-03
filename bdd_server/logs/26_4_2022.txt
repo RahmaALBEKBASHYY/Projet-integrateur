@@ -1,0 +1,1 @@
+<-- <socket.socket fd=5, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('172.20.10.2', 9999), raddr=('172.20.10.2', 42330)> 2022-04-26 17:25:41.866990 return 0;Qui a remporté le Championnat du Monde 2017 dans la catégorie MotoGP ?;Marc Márquez;1;Giacomo Agostini;0;Michael Doohan ;0;Fabio Quartararo;0
